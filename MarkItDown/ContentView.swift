@@ -1,23 +1,28 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @ObservedObject var viewModel: ConversionViewModel
     @State private var previewText: String?
     @State private var previewFileName: String?
+    @State private var previewDragOver = false
 
     var body: some View {
         VStack(spacing: 0) {
             toolbar
 
-            DropZoneView(viewModel: viewModel)
-                .frame(minHeight: 180, idealHeight: 220)
-
-            Divider()
-
             if viewModel.files.isEmpty {
                 emptyState
+                    .onDrop(of: [.fileURL], isTargeted: $previewDragOver) { providers in
+                        handleDrop(providers)
+                        return true
+                    }
             } else {
                 FileListView(viewModel: viewModel, onPreview: showPreview)
+                    .onDrop(of: [.fileURL], isTargeted: $previewDragOver) { providers in
+                        handleDrop(providers)
+                        return true
+                    }
             }
 
             Divider()
@@ -72,6 +77,20 @@ struct ContentView: View {
 
             Spacer()
 
+            Button {
+                viewModel.selectFiles()
+            } label: {
+                Label("选择文件", systemImage: "square.and.arrow.down")
+            }
+
+            Button {
+                viewModel.selectFolder()
+            } label: {
+                Label("选择文件夹", systemImage: "folder.badge.plus")
+            }
+
+            Spacer()
+
             Picker("输出策略", selection: $viewModel.outputStrategy) {
                 Text("原目录输出").tag(OutputStrategy.sameDirectory)
                 Text("自定义目录").tag(OutputStrategy.customDirectory)
@@ -107,16 +126,21 @@ struct ContentView: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Spacer()
+            Image(systemName: "square.and.arrow.down")
+                .font(.system(size: 48))
+                .foregroundColor(previewDragOver ? .accentColor : .secondary)
+                .scaleEffect(previewDragOver ? 1.1 : 1.0)
+
             Text("暂无文件")
                 .font(.title3)
-                .foregroundColor(.secondary)
-            Text("拖放文件到上方区域，或点击选择按钮添加")
+                .foregroundColor(previewDragOver ? .accentColor : .secondary)
+            Text(previewDragOver ? "松开以添加文件" : "拖放文件或点击顶部“选择文件”按钮添加")
                 .font(.caption)
-                .foregroundColor(.secondary.opacity(0.6))
+                .foregroundColor(.secondary)
             Spacer()
         }
         .frame(maxWidth: .infinity)
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
     }
 
     private var bottomBar: some View {
@@ -160,6 +184,25 @@ struct ContentView: View {
               let content = try? String(contentsOf: outputURL, encoding: .utf8) else { return }
         previewFileName = file.outputFileName
         previewText = content
+    }
+
+    private func handleDrop(_ providers: [NSItemProvider]) {
+        let group = DispatchGroup()
+        var urls: [URL] = []
+
+        for provider in providers {
+            group.enter()
+            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { data, _ in
+                defer { group.leave() }
+                guard let data = data as? Data,
+                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                urls.append(url)
+            }
+        }
+
+        group.notify(queue: .main) {
+            viewModel.addFilesFromURLs(urls)
+        }
     }
 }
 

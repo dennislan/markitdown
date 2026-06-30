@@ -6,28 +6,18 @@ struct DropZoneView: View {
     @State private var isTargeted = false
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             Image(systemName: "arrow.down.doc")
-                .font(.system(size: 48))
+                .font(.system(size: 32))
                 .foregroundColor(isTargeted ? .accentColor : .secondary)
                 .scaleEffect(isTargeted ? 1.1 : 1.0)
 
             Text(isTargeted ? "松开以添加文件" : "将文件拖放到此处")
-                .font(.title3)
+                .font(.subheadline)
                 .foregroundColor(isTargeted ? .accentColor : .secondary)
-
-            HStack(spacing: 16) {
-                Button("选择文件") {
-                    viewModel.selectFiles()
-                }
-
-                Button("选择文件夹") {
-                    viewModel.selectFolder()
-                }
-            }
         }
         .frame(maxWidth: .infinity)
-        .padding(32)
+        .padding(20)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isTargeted ? Color.accentColor : Color.secondary.opacity(0.3),
