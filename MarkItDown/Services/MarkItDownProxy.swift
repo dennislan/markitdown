@@ -5,9 +5,20 @@ actor MarkItDownProxy {
     private let sitePackagesPath: String
 
     init() {
-        let envPath = "/Users/dennis/AIProjects/markitdown/markitdown-env"
-        self.pythonURL = URL(fileURLWithPath: "\(envPath)/bin/python3")
-        self.sitePackagesPath = "\(envPath)/lib/python3.14/site-packages"
+        // Resolve Python from the app bundle's embedded Resources directory.
+        // During development (not from a .app bundle), fall back to the local venv.
+        let bundleURL = Bundle.main.bundleURL
+        let resourcesURL = bundleURL.appendingPathComponent("Contents/Resources/python")
+
+        if FileManager.default.fileExists(atPath: resourcesURL.path) {
+            self.pythonURL = resourcesURL.appendingPathComponent("markitdown-env/bin/python3")
+            self.sitePackagesPath = resourcesURL.path + "/markitdown-env/lib/python3.14/site-packages"
+        } else {
+            // Development fallback: use local venv
+            let envPath = "/Users/dennis/AIProjects/markitdown/markitdown-env"
+            self.pythonURL = URL(fileURLWithPath: "\(envPath)/bin/python3")
+            self.sitePackagesPath = "\(envPath)/lib/python3.14/site-packages"
+        }
     }
 
     func convertFile(_ filePath: String) async throws -> String {
@@ -83,10 +94,12 @@ actor MarkItDownProxy {
         do {
             try process.run()
         } catch {
+            let hint = pythonURL.path.contains("Contents/Resources")
+                ? "\n\n请重新构建应用 (Product → Build) 以确保 Python 环境已正确嵌入。"
+                : "\n\n请确认 markitdown-env 已正确安装"
             throw MarkItDownError.conversionFailed(
                 "无法启动 Python 进程: \(error.localizedDescription)\n" +
-                "Python 路径: \(pythonURL.path)\n" +
-                "请确认 markitdown-env 已正确安装"
+                "Python 路径: \(pythonURL.path)\(hint)"
             )
         }
 
