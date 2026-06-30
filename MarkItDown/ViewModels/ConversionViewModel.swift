@@ -122,10 +122,14 @@ class ConversionViewModel: ObservableObject {
 
         Task { @MainActor in
             await scheduler.convert(files: pendingFiles, config: config) { [weak self] itemId, status, outputURL, error in
-                guard let self, let index = self.files.firstIndex(where: { $0.id == itemId }) else { return }
-                self.files[index].status = status
-                self.files[index].outputURL = outputURL
-                self.files[index].errorMessage = error
+                guard let self else { return }
+                guard let index = self.files.firstIndex(where: { $0.id == itemId }) else { return }
+                var file = self.files[index]
+                file.status = status
+                file.outputURL = outputURL
+                file.errorMessage = error
+                self.files[index] = file
+                self.objectWillChange.send()
 
                 if self.files.allSatisfy({ $0.status == .completed || $0.status == .failed }) {
                     self.isConverting = false
@@ -146,8 +150,11 @@ class ConversionViewModel: ObservableObject {
 
     func retryFile(_ file: FileItem) {
         guard let index = files.firstIndex(where: { $0.id == file.id }) else { return }
-        files[index].status = .pending
-        files[index].errorMessage = nil
+        var updated = files[index]
+        updated.status = .pending
+        updated.errorMessage = nil
+        files[index] = updated
+        objectWillChange.send()
 
         if !isConverting {
             startConversion()

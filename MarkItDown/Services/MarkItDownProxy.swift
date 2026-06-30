@@ -103,10 +103,15 @@ actor MarkItDownProxy {
             )
         }
 
-        process.waitUntilExit()
-
+        // Read stdout/stderr BEFORE waitUntilExit to avoid pipe-buffer deadlock.
+        // macOS pipe buffer is ~64KB; if the subprocess writes more than that,
+        // it blocks on write() and never exits, so waitUntilExit() would hang
+        // forever. Reading first drains the pipe and lets the subprocess finish.
         let outputData = stdout.fileHandleForReading.readDataToEndOfFile()
         let errorData = stderr.fileHandleForReading.readDataToEndOfFile()
+
+        process.waitUntilExit()
+
         let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
 
         if process.terminationStatus != 0 {
