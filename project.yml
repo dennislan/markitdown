@@ -1,0 +1,39 @@
+name: MarkItDown
+options:
+  bundleIdPrefix: com.tabbit
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    CODE_SIGN_ENTITLEMENTS: MarkItDown/Resources/MarkItDown.entitlements
+    INFOPLIST_FILE: MarkItDown/Info.plist
+    PRODUCT_BUNDLE_IDENTIFIER: com.tabbit.markitdown
+    ENABLE_HARDENED_RUNTIME: YES
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  MarkItDown:
+    type: application
+    platform: macOS
+    sources:
+      - path: MarkItDown
+        excludes:
+          - "markitdown-env"
+    resources:
+      - path: MarkItDown/Resources/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_NAME: MarkItDown
+        PRODUCT_BUNDLE_IDENTIFIER: com.tabbit.markitdown
+        INFOPLIST_FILE: MarkItDown/Info.plist
+        CODE_SIGN_ENTITLEMENTS: MarkItDown/Resources/MarkItDown.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_EMIT_LOC_STRINGS: YES
+        GENERATE_INFOPLIST_FILE: NO

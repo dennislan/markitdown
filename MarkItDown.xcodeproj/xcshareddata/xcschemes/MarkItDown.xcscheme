@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme LastUpgradeVersion = "1500" version = "1.7">
+  <BuildAction
+    parallelizeBuildings = "YES"
+    buildImplicitDependencies = "YES"
+    runPostActionsOnFailure = "NO">
+    <BuildActionEntries>
+      <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES">
+        <BuildableReference
+          BuildableIdentifier = "primary"
+          BlueprintIdentifier = "26E041504228188FF25B35DA"
+          BuildableName = "MarkItDown.app"
+          BlueprintName = "MarkItDown"
+          ReferencedContainer = "container:MarkItDown.xcodeproj">
+        </BuildableReference>
+      </BuildActionEntry>
+    </BuildActionEntries>
+  </BuildAction>
+
+  <TestAction
+    buildConfiguration = "Debug"
+    selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+    selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+    shouldUseLaunchSchemeArgsEnv = "YES"
+    shouldAutocreateTestPlan = "YES">
+  </TestAction>
+
+  <LaunchAction
+    buildConfiguration = "Debug"
+    selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+    selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+    launchStyle = "0"
+    useCustomWorkingDirectory = "NO"
+    ignoresPersistentStateOnLaunch = "NO"
+    debugDocumentVersioning = "YES"
+    debugServiceExtension = "internal"
+    enableGPUValidationMode = "NO"
+    allowLocationSimulation = "YES">
+  </LaunchAction>
+
+  <ProfileAction
+    buildConfiguration = "Release"
+    shouldUseLaunchSchemeArgsEnv = "YES"
+    savedToolIdentifier = ""
+    debugDocumentVersioning = "YES">
+  </ProfileAction>
+
+  <AnalyzeAction
+    buildConfiguration = "Debug">
+  </AnalyzeAction>
+
+  <ArchiveAction
+    buildConfiguration = "Release"
+    revealArchiveInOrganizer = "YES">
+  </ArchiveAction>
+</Scheme>
