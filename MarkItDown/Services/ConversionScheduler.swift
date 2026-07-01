@@ -6,14 +6,40 @@ struct ConversionConfig {
     let sourceBaseDirectory: URL?
     let concurrency: Int
 
+    // Advanced settings
+    let enableLLM: Bool
+    let llmApiKey: String?
+    let llmModel: String
+    let enableOCR: Bool
+    let enableAzure: Bool
+    let azureEndpoint: String?
+    let azureApiKey: String?
+    let customLLMPrompt: String
+
     init(outputStrategy: OutputStrategy = .sameDirectory,
          customOutputDirectory: URL? = nil,
          sourceBaseDirectory: URL? = nil,
-         concurrency: Int = 4) {
+         concurrency: Int = 4,
+         enableLLM: Bool = false,
+         llmApiKey: String? = nil,
+         llmModel: String = "gpt-4o",
+         enableOCR: Bool = false,
+         enableAzure: Bool = false,
+         azureEndpoint: String? = nil,
+         azureApiKey: String? = nil,
+         customLLMPrompt: String = "") {
         self.outputStrategy = outputStrategy
         self.customOutputDirectory = customOutputDirectory
         self.sourceBaseDirectory = sourceBaseDirectory
         self.concurrency = max(1, min(8, concurrency))
+        self.enableLLM = enableLLM
+        self.llmApiKey = llmApiKey
+        self.llmModel = llmModel
+        self.enableOCR = enableOCR
+        self.enableAzure = enableAzure
+        self.azureEndpoint = azureEndpoint
+        self.azureApiKey = azureApiKey
+        self.customLLMPrompt = customLLMPrompt
     }
 }
 
@@ -37,7 +63,10 @@ actor ConversionScheduler {
                     }
 
                     do {
-                        let markdown = try await self.proxy.convertFile(file.url.path)
+                        let markdown = try await self._convertWithOptions(
+                            file.url.path,
+                            config: config
+                        )
 
                         guard let outputURL = self.fileManager.resolveOutputURL(
                             for: file, strategy: config.outputStrategy,
@@ -63,5 +92,32 @@ actor ConversionScheduler {
                 }
             }
         }
+    }
+
+    private func _convertWithOptions(
+        _ filePath: String,
+        config: ConversionConfig
+    ) async throws -> String {
+        // If any advanced option is enabled, use the advanced path
+        let anyAdvancedEnabled = config.enableLLM && config.llmApiKey != nil && !config.llmApiKey!.isEmpty
+            || config.enableOCR
+            || (config.enableAzure && config.azureApiKey != nil && !config.azureApiKey!.isEmpty)
+
+        if anyAdvancedEnabled {
+            return try await self.proxy.convertFileWithOptions(
+                filePath,
+                enableLLM: config.enableLLM,
+                llmApiKey: config.llmApiKey,
+                llmModel: config.llmModel,
+                enableOCR: config.enableOCR,
+                enableAzure: config.enableAzure,
+                azureEndpoint: config.azureEndpoint,
+                azureApiKey: config.azureApiKey,
+                customPrompt: config.customLLMPrompt
+            )
+        }
+
+        // Fallback to basic conversion
+        return try await self.proxy.convertFile(filePath)
     }
 }

@@ -1,6 +1,6 @@
 name: MarkItDown
 options:
-  bundleIdPrefix: com.tabbit
+  bundleIdPrefix: com.dennis
   deploymentTarget:
     macOS: "13.0"
   xcodeVersion: "15.0"
@@ -12,7 +12,7 @@ settings:
     MACOSX_DEPLOYMENT_TARGET: "13.0"
     CODE_SIGN_ENTITLEMENTS: MarkItDown/Resources/MarkItDown.entitlements
     INFOPLIST_FILE: MarkItDown/Info.plist
-    PRODUCT_BUNDLE_IDENTIFIER: com.tabbit.markitdown
+    PRODUCT_BUNDLE_IDENTIFIER: com.dennis.markitdown
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Automatic
 
@@ -29,7 +29,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: MarkItDown
-        PRODUCT_BUNDLE_IDENTIFIER: com.tabbit.markitdown
+        PRODUCT_BUNDLE_IDENTIFIER: com.dennis.markitdown
         INFOPLIST_FILE: MarkItDown/Info.plist
         CODE_SIGN_ENTITLEMENTS: MarkItDown/Resources/MarkItDown.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

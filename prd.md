@@ -726,7 +726,7 @@ flowchart TB
 - 启用 Azure Document Intelligence（`Toggle` + `TextField` 端点 URL）
 - 自定义 LLM Prompt（`TextEditor`，仅图片描述生效）
 
-**敏感信息存储策略：** API Key 等敏感配置通过 `Security` 框架存储于 macOS Keychain（使用 `keychain-swift` 或原生 `SecItemAdd` API），不写入 `UserDefaults` 明文。非敏感配置通过 `@AppStorage` 持久化至 `~/Library/Preferences/com.tabbit.markdown-converter.plist`。
+**敏感信息存储策略：** API Key 等敏感配置通过 `Security` 框架存储于 macOS Keychain（使用 `keychain-swift` 或原生 `SecItemAdd` API），不写入 `UserDefaults` 明文。非敏感配置通过 `@AppStorage` 持久化至 `~/Library/Preferences/com.dennis.markdown-converter.plist`。
 
 ---
 

@@ -12,6 +12,7 @@
 		0F1BBDA712C2E53A997C9FFE /* DropZoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3D08E06FEC0B86BC456A72F /* DropZoneView.swift */; };
 		10DB62DA1CBBE89796B777C4 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B6717A46D0DD8B53EBDCBC8 /* SettingsView.swift */; };
 		1CEA93B4C158D875E4A397E0 /* OutputStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA8C0FF33D62847FF78FE1F /* OutputStrategy.swift */; };
+		827CFE82248C421789C42CFB4B2D4 /* AdvancedSettingsConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C35488AAA54543ACCA0AA25178FB70 /* AdvancedSettingsConfig.swift */; };
 		23356F1443FF0EAB705301AC /* MarkItDownCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08975813CEA75695CEB123BE /* MarkItDownCommands.swift */; };
 		3350DD2E354FC2CC9FEB3CAA /* FileListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0359B960C448D3231AAB835 /* FileListView.swift */; };
 		5ED503FFC2FA248CEDBF4F03 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 737300ABCB4A1D5FD6CC8962 /* KeychainHelper.swift */; };
@@ -35,6 +36,7 @@
 		246EAE3CBFC839D6AA17A3A3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		2EA26918200C7CF6EC574DA6 /* AsyncSemaphore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncSemaphore.swift; sourceTree = "<group>"; };
 		3EA8C0FF33D62847FF78FE1F /* OutputStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputStrategy.swift; sourceTree = "<group>"; };
+		52C35488AAA54543ACCA0AA25178FB70 /* AdvancedSettingsConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedSettingsConfig.swift; sourceTree = "<group>"; };
 		57BB94AC8E8BFEB0346DCA15 /* ConversionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionViewModel.swift; sourceTree = "<group>"; };
 		6EDE16FAEE4D57A9A571131A /* MarkItDown.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MarkItDown.entitlements; sourceTree = "<group>"; };
 		737300ABCB4A1D5FD6CC8962 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
@@ -60,6 +62,7 @@
 				E1B87FDDE7049EEF6EF0C9FF /* ConversionStatus.swift */,
 				A20D232076C8A2528C24B27B /* FileItem.swift */,
 				3EA8C0FF33D62847FF78FE1F /* OutputStrategy.swift */,
+				52C35488AAA54543ACCA0AA25178FB70 /* AdvancedSettingsConfig.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -220,6 +223,7 @@
 				BEF31600345F37E7BC4DCD35 /* ContentView.swift in Sources */,
 				BDDBED0AE981561EB5F15AA4 /* ConversionScheduler.swift in Sources */,
 				C78B5C733C9C6616C25CB2BD /* ConversionStatus.swift in Sources */,
+				827CFE82248C421789C42CFB4B2D4 /* AdvancedSettingsConfig.swift in Sources */,
 				C7156CED443BF93AC5927AC7 /* ConversionViewModel.swift in Sources */,
 				0F1BBDA712C2E53A997C9FFE /* DropZoneView.swift in Sources */,
 				B52880C113C042DEBC8280D2 /* FileItem.swift in Sources */,
@@ -349,7 +353,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tabbit.markitdown;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dennis.markitdown;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
@@ -410,7 +414,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tabbit.markitdown;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dennis.markitdown;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;

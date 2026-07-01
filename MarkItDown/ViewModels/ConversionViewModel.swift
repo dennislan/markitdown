@@ -113,11 +113,22 @@ class ConversionViewModel: ObservableObject {
 
         let sourceBase = inferSourceBaseDirectory(from: pendingFiles)
 
+        // Read advanced settings
+        let advConfig = AdvancedSettingsConfig()
+
         let config = ConversionConfig(
             outputStrategy: outputStrategy,
             customOutputDirectory: customOutputDirectory,
             sourceBaseDirectory: sourceBase,
-            concurrency: Int(UserDefaults.standard.double(forKey: "concurrency").rounded())
+            concurrency: Int(UserDefaults.standard.double(forKey: "concurrency").rounded()),
+            enableLLM: advConfig.enableLLMDescription,
+            llmApiKey: advConfig.llmApiKey,
+            llmModel: advConfig.llmModel,
+            enableOCR: advConfig.enableOCR,
+            enableAzure: advConfig.enableAzure,
+            azureEndpoint: advConfig.enableAzure ? advConfig.azureEndpoint : nil,
+            azureApiKey: advConfig.enableAzure ? advConfig.azureApiKey : nil,
+            customLLMPrompt: advConfig.customLLMPrompt
         )
 
         Task { @MainActor in

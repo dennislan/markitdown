@@ -24,7 +24,7 @@ struct MarkItDownApp: App {
 
             for scriptPath in scriptCandidates {
                 if FileManager.default.fileExists(atPath: scriptPath) {
-                    let logger = Logger(subsystem: "com.tabbit.markitdown", category: "startup")
+                    let logger = Logger(subsystem: "com.dennis.markitdown", category: "startup")
                     logger.info("Auto-embedding Python from: \(scriptPath)")
 
                     let process = Process()
