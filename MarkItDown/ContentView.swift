@@ -134,12 +134,11 @@ struct ContentView: View {
             Text("暂无文件")
                 .font(.title3)
                 .foregroundColor(previewDragOver ? .accentColor : .secondary)
-            Text(previewDragOver ? "松开以添加文件" : "拖放文件或点击顶部“选择文件”按钮添加")
+            Text(previewDragOver ? "松开以添加文件" : "拖放文件或点击顶部\"选择文件\"按钮添加")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            Spacer()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .transition(.opacity.combined(with: .scale(scale: 0.95)))
     }
 
