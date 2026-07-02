@@ -4,35 +4,35 @@ final class AsyncSemaphore {
     private let value: Int
     private var count: Int
     private var waiters: [CheckedContinuation<Void, Never>] = []
-    private let lock = NSLock()
+    private var unfairLock = os_unfair_lock()
 
     init(value: Int) {
         self.value = value
         self.count = value
     }
 
+    private func withLock<T>(_ body: () -> T) -> T {
+        os_unfair_lock_lock(&unfairLock)
+        defer { os_unfair_lock_unlock(&unfairLock) }
+        return body()
+    }
+
     func wait() async {
-        lock.lock()
-        defer { lock.unlock() }
-        if count > 0 {
-            count -= 1
+        if withLock({ count > 0 }) {
+            withLock { count -= 1 }
             return
         }
 
         await withCheckedContinuation { continuation in
-            lock.lock()
-            defer { lock.unlock() }
-            waiters.append(continuation)
+            withLock { waiters.append(continuation) }
         }
     }
 
     func signal() {
-        lock.lock()
-        defer { lock.unlock() }
-        if waiters.isEmpty {
-            count += 1
+        if withLock { waiters.isEmpty } {
+            withLock { count += 1 }
         } else {
-            let continuation = waiters.removeFirst()
+            let continuation = withLock { waiters.removeFirst() }
             continuation.resume()
         }
     }

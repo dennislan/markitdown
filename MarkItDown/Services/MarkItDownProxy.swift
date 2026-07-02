@@ -138,16 +138,51 @@ actor MarkItDownProxy {
             return try _convertWithTextutil(filePath: filePath)
         }
 
+        // Check if this is a .ppt file (legacy PowerPoint) — needs custom converter
+        let isPpt = filePath.lowercased().hasSuffix(".ppt")
+
         let escapedPath = filePath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
 
-        let script = """
-        import sys
+        var script = """
+        import sys, tempfile, os
         sys.path.insert(0, "\(sitePackagesPath)")
         from markitdown import MarkItDown
+        """
+
+        if isPpt {
+            // Locate the app bundle to find PptConverter.py
+            script += """
+
+            _bundle = os.path.dirname(sys.executable)
+            if _bundle.endswith("/Contents/Resources/python/markitdown-env/bin"):
+                _bundle = _bundle[: -len("/Contents/Resources/python/markitdown-env/bin")] + "/Contents/Resources"
+            elif _bundle.endswith("/bin"):
+                _bundle = _bundle[: -len("/bin")] + "/Resources"
+
+            _converter_src = open(os.path.join(_bundle, "PptConverter.py")).read()
+            _converter_path = os.path.join(tempfile.gettempdir(), "PptConverter.py")
+            with open(_converter_path, "w") as f:
+                f.write(_converter_src)
+            sys.path.insert(0, tempfile.gettempdir())
+            from PptConverter import PptConverter
+
+            class _RegMarkItDown(MarkItDown):
+                def register_converter(self, converter, *, priority=0.0):
+                    from markitdown._markitdown import ConverterRegistration
+                    self._converters.insert(0, ConverterRegistration(converter=converter, priority=priority))
+
+            md = _RegMarkItDown(enable_plugins=False)
+            md.register_converter(PptConverter())
+            result = md.convert("\(escapedPath)", keep_data_uris=True)
+            sys.stdout.write(result.text_content)
+            """
+        } else {
+            script += """
         md = MarkItDown(enable_plugins=False)
         result = md.convert("\(escapedPath)", keep_data_uris=True)
         sys.stdout.write(result.text_content)
         """
+        }
 
         return try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
     }
@@ -164,21 +199,51 @@ actor MarkItDownProxy {
             return try _convertWithTextutil(filePath: filePath)
         }
 
+        // Legacy .ppt files need a custom converter
+        if filePath.lowercased().hasSuffix(".ppt") {
+            return try _runPptConvert(
+                filePath: filePath,
+                pythonURL: pythonURL,
+                sitePackagesPath: sitePackagesPath,
+                enableLLM: true,
+                llmApiKey: apiKey,
+                llmModel: model,
+                enableOCR: false,
+                enableAzure: false,
+                azureEndpoint: nil,
+                azureApiKey: nil,
+                customPrompt: ""
+            )
+        }
+
         let escapedPath = filePath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-        let escapedKey = apiKey.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-        let escapedModel = model.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
 
-        let script = """
-        import sys
-        sys.path.insert(0, "\(sitePackagesPath)")
-        from markitdown import MarkItDown
-        from openai import OpenAI
-        client = OpenAI(api_key="\(escapedKey)")
-        md = MarkItDown(llm_client=client, llm_model="\(escapedModel)")
-        result = md.convert("\(escapedPath)", keep_data_uris=True)
-        sys.stdout.write(result.text_content)
-        """
+        var parts = [String]()
+        parts.append("import sys")
+        parts.append("sys.path.insert(0, \"\(sitePackagesPath)\")")
+        parts.append("from markitdown import MarkItDown")
 
+        var kwargs = [String]()
+        if !apiKey.isEmpty {
+            let escapedKey = apiKey.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+            let escapedModel = model.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+            kwargs.append("llm_client=__llm_client")
+            kwargs.append("llm_model=\"\(escapedModel)\"")
+            parts.append("from openai import OpenAI")
+            parts.append("__llm_client = OpenAI(api_key=\"\(escapedKey)\")")
+        }
+
+        if kwargs.isEmpty {
+            parts.append("md = MarkItDown(enable_plugins=False)")
+        } else {
+            let kwargStr = kwargs.joined(separator: ", ")
+            parts.append("md = MarkItDown(\(kwargStr))")
+        }
+
+        parts.append("result = md.convert(\"\(escapedPath)\", keep_data_uris=True)")
+        parts.append("sys.stdout.write(result.text_content)")
+
+        let script = parts.joined(separator: "\n")
         return try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
     }
 
@@ -198,6 +263,23 @@ actor MarkItDownProxy {
         // Legacy .doc files are not supported by markitdown — fall back to macOS textutil.
         if filePath.lowercased().hasSuffix(".doc") {
             return try _convertWithTextutil(filePath: filePath)
+        }
+
+        // Legacy .ppt files need a custom converter — delegate to a unified script builder
+        if filePath.lowercased().hasSuffix(".ppt") {
+            return try _runPptConvert(
+                filePath: filePath,
+                pythonURL: pythonURL,
+                sitePackagesPath: sitePackagesPath,
+                enableLLM: enableLLM,
+                llmApiKey: llmApiKey,
+                llmModel: llmModel,
+                enableOCR: enableOCR,
+                enableAzure: enableAzure,
+                azureEndpoint: azureEndpoint,
+                azureApiKey: azureApiKey,
+                customPrompt: customPrompt
+            )
         }
 
         let escapedPath = filePath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
@@ -316,6 +398,109 @@ actor MarkItDownProxy {
         }
 
         return output
+    }
+
+    /// Unified .ppt conversion with advanced options (LLM, Azure, OCR).
+    private nonisolated func _runPptConvert(
+        filePath: String,
+        pythonURL: URL,
+        sitePackagesPath: String,
+        enableLLM: Bool,
+        llmApiKey: String?,
+        llmModel: String,
+        enableOCR: Bool,
+        enableAzure: Bool,
+        azureEndpoint: String?,
+        azureApiKey: String?,
+        customPrompt: String
+    ) throws -> String {
+        let escapedPath = filePath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+
+        var parts = [String]()
+        parts.append("import sys, tempfile, os")
+        parts.append("sys.path.insert(0, \"\(sitePackagesPath)\")")
+        parts.append("from markitdown import MarkItDown")
+
+        // Locate the app bundle to find PptConverter.py
+        parts.append("")
+        parts.append("_bundle = os.path.dirname(sys.executable)")
+        parts.append("if _bundle.endswith('/Contents/Resources/python/markitdown-env/bin'):")
+        parts.append("    _bundle = _bundle[:-len('/Contents/Resources/python/markitdown-env/bin')] + '/Contents/Resources'")
+        parts.append("elif _bundle.endswith('/bin'):")
+        parts.append("    _bundle = _bundle[:-len('/bin')] + '/Resources'")
+        parts.append("")
+        parts.append("_converter_src = open(os.path.join(_bundle, 'PptConverter.py')).read()")
+        parts.append("_converter_path = os.path.join(tempfile.gettempdir(), 'PptConverter.py')")
+        parts.append("with open(_converter_path, 'w') as f:")
+        parts.append("    f.write(_converter_src)")
+        parts.append("sys.path.insert(0, tempfile.gettempdir())")
+        parts.append("from PptConverter import PptConverter")
+        parts.append("")
+        parts.append("class _RegMarkItDown(MarkItDown):")
+        parts.append("    def register_converter(self, converter, *, priority=0.0):")
+        parts.append("        from markitdown._markitdown import ConverterRegistration")
+        parts.append("        self._converters.insert(0, ConverterRegistration(converter=converter, priority=priority))")
+
+        // Build kwargs for MarkItDown constructor
+        var kwargs = [String]()
+
+        if enableLLM, let apiKey = llmApiKey, !apiKey.isEmpty {
+            let escapedKey = apiKey.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+            let escapedModel = llmModel.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+            kwargs.append("llm_client=__llm_client")
+            kwargs.append("llm_model=\"\(escapedModel)\"")
+            parts.append("from openai import OpenAI")
+            parts.append("__llm_client = OpenAI(api_key=\"\(escapedKey)\")")
+        }
+
+        if enableAzure, let endpoint = azureEndpoint, !endpoint.isEmpty,
+           let azureKey = azureApiKey, !azureKey.isEmpty {
+            let escapedEndpoint = endpoint.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+            let escapedAzureKey = azureKey.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+            kwargs.append("azure_endpoint=\"\(escapedEndpoint)\"")
+            kwargs.append("azure_api_key=\"\(escapedAzureKey)\"")
+            parts.append("from azure.ai.documentintelligence import DocumentIntelligenceClient")
+            parts.append("from azure.core.credentials import AzureKeyCredential")
+            parts.append("__azure_client = DocumentIntelligenceClient(")
+            parts.append("    endpoint=\"\(escapedEndpoint)\",")
+            parts.append("    credential=AzureKeyCredential(\"\(escapedAzureKey)\")")
+            parts.append(")")
+        }
+
+        if enableOCR {
+            kwargs.append("enable_plugins=True")
+        }
+
+        // Use _RegMarkItDown with PptConverter registered
+        if kwargs.isEmpty {
+            parts.append("md = _RegMarkItDown(enable_plugins=False)")
+        } else {
+            let kwargStr = kwargs.joined(separator: ", ")
+            parts.append("md = _RegMarkItDown(\(kwargStr))")
+        }
+        parts.append("md.register_converter(PptConverter())")
+
+        // Execute conversion
+        if enableLLM && !customPrompt.isEmpty {
+            let escapedPrompt = customPrompt.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+            parts.append("")
+            parts.append("__custom_prompt = \"\(escapedPrompt)\"")
+            parts.append("_result = md.convert(\"\(escapedPath)\", keep_data_uris=True)")
+            parts.append("_text = _result.text_content")
+            parts.append("__marker = '\\n---\\n[Image Description]\\n---\\n'")
+            parts.append("if __marker in _text:")
+            parts.append("    _text = _text.replace(__marker, __custom_prompt + __marker)")
+            parts.append("elif '[LLM image description]' in _text:")
+            parts.append("    _text = _text.replace('[LLM image description]', __custom_prompt)")
+            parts.append("_result._text_content = _text")
+            parts.append("sys.stdout.write(_result.text_content)")
+        } else {
+            parts.append("result = md.convert(\"\(escapedPath)\", keep_data_uris=True)")
+            parts.append("sys.stdout.write(result.text_content)")
+        }
+
+        let script = parts.joined(separator: "\n")
+        return try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
     }
 
     private nonisolated func _runPython(
