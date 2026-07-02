@@ -27,6 +27,7 @@
 		E3E2CE8D61A0F802B07B1032 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246EAE3CBFC839D6AA17A3A3 /* NotificationService.swift */; };
 		EB216FCFA15A62E6CAD12B80 /* FileManagerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE6FC10522FEC75DD7992E /* FileManagerService.swift */; };
 		ECDC401A4E58FFA009E84AC4 /* MarkItDownApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A3141C5DCDD5022DA0869D /* MarkItDownApp.swift */; };
+		F5A2B3C4D5E6F7A8B9C0D1E2 /* PptConverter.py in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* PptConverter.py */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +54,7 @@
 		E3D08E06FEC0B86BC456A72F /* DropZoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropZoneView.swift; sourceTree = "<group>"; };
 		F14F7A9AFD3014C40DB33DFB /* ConversionScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionScheduler.swift; sourceTree = "<group>"; };
 		F3D2B5CE536387FCFF6553BF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* PptConverter.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = PptConverter.py; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -145,6 +147,7 @@
 			children = (
 				F3D2B5CE536387FCFF6553BF /* Assets.xcassets */,
 				6EDE16FAEE4D57A9A571131A /* MarkItDown.entitlements */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* PptConverter.py */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -208,6 +211,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F5A2B3C4D5E6F7A8B9C0D1E2 /* PptConverter.py in Resources */,
 				654B233515BE6C9098118EE1 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

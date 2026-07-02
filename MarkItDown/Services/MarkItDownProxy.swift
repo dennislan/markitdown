@@ -143,47 +143,44 @@ actor MarkItDownProxy {
 
         let escapedPath = filePath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
 
-        var script = """
-        import sys, tempfile, os
-        sys.path.insert(0, "\(sitePackagesPath)")
-        from markitdown import MarkItDown
-        """
+        var parts = [String]()
+        parts.append("import sys, tempfile, os")
+        parts.append("sys.path.insert(0, \"\(sitePackagesPath)\")")
+        parts.append("from markitdown import MarkItDown")
 
         if isPpt {
             // Locate the app bundle to find PptConverter.py
-            script += """
-
-            _bundle = os.path.dirname(sys.executable)
-            if _bundle.endswith("/Contents/Resources/python/markitdown-env/bin"):
-                _bundle = _bundle[: -len("/Contents/Resources/python/markitdown-env/bin")] + "/Contents/Resources"
-            elif _bundle.endswith("/bin"):
-                _bundle = _bundle[: -len("/bin")] + "/Resources"
-
-            _converter_src = open(os.path.join(_bundle, "PptConverter.py")).read()
-            _converter_path = os.path.join(tempfile.gettempdir(), "PptConverter.py")
-            with open(_converter_path, "w") as f:
-                f.write(_converter_src)
-            sys.path.insert(0, tempfile.gettempdir())
-            from PptConverter import PptConverter
-
-            class _RegMarkItDown(MarkItDown):
-                def register_converter(self, converter, *, priority=0.0):
-                    from markitdown._markitdown import ConverterRegistration
-                    self._converters.insert(0, ConverterRegistration(converter=converter, priority=priority))
-
-            md = _RegMarkItDown(enable_plugins=False)
-            md.register_converter(PptConverter())
-            result = md.convert("\(escapedPath)", keep_data_uris=True)
-            sys.stdout.write(result.text_content)
-            """
+            parts.append("")
+            parts.append("_bundle = os.path.dirname(sys.executable)")
+            parts.append("if _bundle.endswith('/Contents/Resources/python/markitdown-env/bin'):")
+            parts.append("    _bundle = _bundle[:-len('/Contents/Resources/python/markitdown-env/bin')] + '/Contents/Resources'")
+            parts.append("elif _bundle.endswith('/bin'):")
+            parts.append("    _bundle = _bundle[:-len('/bin')] + '/Resources'")
+            parts.append("")
+            parts.append("_converter_src = open(os.path.join(_bundle, 'PptConverter.py')).read()")
+            parts.append("_converter_path = os.path.join(tempfile.gettempdir(), 'PptConverter.py')")
+            parts.append("with open(_converter_path, 'w') as f:")
+            parts.append("    f.write(_converter_src)")
+            parts.append("sys.path.insert(0, tempfile.gettempdir())")
+            parts.append("from PptConverter import PptConverter")
+            parts.append("")
+            parts.append("class _RegMarkItDown(MarkItDown):")
+            parts.append("    def register_converter(self, converter, *, priority=0.0):")
+            parts.append("        from markitdown._markitdown import ConverterRegistration")
+            parts.append("        self._converters.insert(0, ConverterRegistration(converter=converter, priority=priority))")
+            parts.append("")
+            parts.append("md = _RegMarkItDown(enable_plugins=False)")
+            parts.append("md.register_converter(PptConverter())")
+            parts.append("result = md.convert(\"\(escapedPath)\", keep_data_uris=True)")
+            parts.append("sys.stdout.write(result.text_content)")
         } else {
-            script += """
-        md = MarkItDown(enable_plugins=False)
-        result = md.convert("\(escapedPath)", keep_data_uris=True)
-        sys.stdout.write(result.text_content)
-        """
+            parts.append("")
+            parts.append("md = MarkItDown(enable_plugins=False)")
+            parts.append("result = md.convert(\"\(escapedPath)\", keep_data_uris=True)")
+            parts.append("sys.stdout.write(result.text_content)")
         }
 
+        let script = parts.joined(separator: "\n")
         return try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
     }
 
