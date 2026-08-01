@@ -60,6 +60,30 @@ fi
 RESOURCES_DIR="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources"
 PYTHON_DIR="${RESOURCES_DIR}/python"
 
+# ── Custom converter sources ──────────────────────────────────────────────
+# PptConverter.py must live INSIDE the bundle at Contents/Resources/python/ —
+# MarkItDownProxy.resolveRuntime() looks exactly there (pptConverterDir ==
+# resourcesURL) when the embedded venv is present. The Xcode "Resources" build
+# phase copies it to Contents/Resources/ (one level up), which the Swift
+# runtime never checks, so we copy it here explicitly. Missing sources are
+# tolerated (dev fallback still finds the repo copy); a present-but-stale copy
+# is always overwritten. RobustPdfConverter.py was retired — PDF OCR now runs
+# on-device in Swift (Vision), so no Python OCR packages are embedded.
+PPT_CONVERTER_SRC="${PROJECT_DIR}/MarkItDown/Resources/PptConverter.py"
+
+# Idempotently sync the custom converters into the bundle. Called both before
+# the fast-path check (so incremental builds that skip the embed still ship
+# them) and after a full embed (whose rm -rf above removes them).
+sync_converters() {
+    mkdir -p "$PYTHON_DIR"
+    if [ -f "$PPT_CONVERTER_SRC" ]; then
+        cp -f "$PPT_CONVERTER_SRC" "${PYTHON_DIR}/$(basename "$PPT_CONVERTER_SRC")"
+        echo "   + $(basename "$PPT_CONVERTER_SRC")"
+    else
+        echo "   ⚠️  missing converter source: $PPT_CONVERTER_SRC"
+    fi
+}
+
 echo "🐍 Embedding Python environment into app bundle…"
 echo "   Framework source : $PYTHON_FRAMEWORK_CELLAR"
 echo "   Venv source      : $VENV_SRC"
@@ -71,6 +95,11 @@ echo "   Destination      : $PYTHON_DIR"
 # (brew upgrades); the marker is written at the end of a successful run.
 MARKER="${RESOURCES_DIR}/.python_embedded"
 SITE_PACKAGES_DIR="${VENV_SRC}/lib/python${PYTHON_VERSION}/site-packages"
+
+# Converters must be in place even when the embed itself is skipped below.
+echo "📄 Syncing custom converters…"
+sync_converters
+
 if [ -f "$MARKER" ] && [ "$MARKER" -nt "$SITE_PACKAGES_DIR" ] && [ "$MARKER" -nt "$PYTHON_FRAMEWORK_CELLAR" ]; then
     echo "⏭️  Python runtime already embedded and up-to-date — skipping."
     exit 0
@@ -80,6 +109,9 @@ fi
 rm -rf "$PYTHON_DIR"
 mkdir -p "${PYTHON_DIR}/Frameworks"
 mkdir -p "$PYTHON_DIR/markitdown-env"
+
+# Re-sync converters into the freshly recreated directory.
+sync_converters
 
 # ── 1. Copy Python.framework ─────────────────────────────────────────────
 FRAMEWORK_DST="${PYTHON_DIR}/Frameworks/Python.framework"
@@ -230,8 +262,29 @@ find "${PYTHON_DIR}" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null |
 find "${PYTHON_DIR}" -name "*.pyc" -delete 2>/dev/null || true
 find "${PYTHON_DIR}" -name "*.pyo" -delete 2>/dev/null || true
 
-# Remove pip's build artifacts (small savings)
-find "${PYTHON_DIR}" -name "pip*" -type d -path "*/site-packages/*" -exec rm -rf {} + 2>/dev/null || true
+# pip/setuptools unused at runtime; msoffcrypto hits pkg_resources only in CLI __main__
+SP_DIR="${VENV_DST}/lib/python${PYTHON_VERSION}/site-packages"
+rm -rf "${SP_DIR}/pip" "${SP_DIR}"/pip-*.dist-info \
+       "${SP_DIR}/setuptools" "${SP_DIR}"/setuptools-*.dist-info \
+       "${SP_DIR}/pkg_resources" "${SP_DIR}/_distutils_hack" \
+       "${SP_DIR}/distutils-precedence.pth" 2>/dev/null || true
+
+# Retired Python OCR stack (replaced by on-device Swift Vision OCR): rapidocr,
+# opencv, shapely, pyclipper, pymupdf. onnxruntime is deliberately KEPT —
+# magika (markitdown's file-type sniffer) imports it at startup.
+for pat in "rapidocr_onnxruntime*" "cv2" "opencv_python*" "shapely*" "pyclipper*" "pymupdf*" "fitz"; do
+    rm -rf "${SP_DIR}"/${pat} 2>/dev/null || true
+done
+
+# venv bin/ is all console scripts — conversions import in-process; the 26 MB magika CLI stays unused
+find "${VENV_BIN}" -maxdepth 1 -type f ! -name "python*" -delete 2>/dev/null || true
+
+# Stdlib GUI/tests/pydoc/ensurepip dirs have no runtime user
+STDLIB="${FRAMEWORK_VERSIONS_DIR}/lib/python${PYTHON_VERSION}"
+for d in test ensurepip idlelib tkinter turtledemo pydoc_data lib2to3; do
+    rm -rf "${STDLIB}/${d}" 2>/dev/null || true
+done
+find "${STDLIB}/lib-dynload" -name "_test*" -delete 2>/dev/null || true
 
 # ── 7. Summary ────────────────────────────────────────────────────────────
 BUNDLE_SIZE=$(du -sk "${PYTHON_DIR}" 2>/dev/null | awk '{print $1}')

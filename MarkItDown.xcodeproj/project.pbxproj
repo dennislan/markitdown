@@ -11,13 +11,14 @@
 		0A0A61658CC623DFB02E2C27 /* FileListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C09E51AAF86FAE375806930 /* FileListRow.swift */; };
 		0F1BBDA712C2E53A997C9FFE /* DropZoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3D08E06FEC0B86BC456A72F /* DropZoneView.swift */; };
 		10DB62DA1CBBE89796B777C4 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B6717A46D0DD8B53EBDCBC8 /* SettingsView.swift */; };
+		1B03B86A8FE0262354322491 /* PptConverter.py in Resources */ = {isa = PBXBuildFile; fileRef = 82C8097968E5A6931B3774D7 /* PptConverter.py */; };
 		1CEA93B4C158D875E4A397E0 /* OutputStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA8C0FF33D62847FF78FE1F /* OutputStrategy.swift */; };
-		827CFE82248C421789C42CFB4B2D4 /* AdvancedSettingsConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C35488AAA54543ACCA0AA25178FB70 /* AdvancedSettingsConfig.swift */; };
 		23356F1443FF0EAB705301AC /* MarkItDownCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08975813CEA75695CEB123BE /* MarkItDownCommands.swift */; };
 		3350DD2E354FC2CC9FEB3CAA /* FileListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0359B960C448D3231AAB835 /* FileListView.swift */; };
 		5ED503FFC2FA248CEDBF4F03 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 737300ABCB4A1D5FD6CC8962 /* KeychainHelper.swift */; };
 		654B233515BE6C9098118EE1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F3D2B5CE536387FCFF6553BF /* Assets.xcassets */; };
 		68D68DEC40D07D5B5F2CF17F /* MarkItDownProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097A4DF3C565E86B6DB9BA19 /* MarkItDownProxy.swift */; };
+		94F5D594F0F2C699C2B3CDCC /* AdvancedSettingsConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC867130345AECD8275B03E9 /* AdvancedSettingsConfig.swift */; };
 		B52880C113C042DEBC8280D2 /* FileItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20D232076C8A2528C24B27B /* FileItem.swift */; };
 		BDDBED0AE981561EB5F15AA4 /* ConversionScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14F7A9AFD3014C40DB33DFB /* ConversionScheduler.swift */; };
 		BEF31600345F37E7BC4DCD35 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB3BB0AC0BB5DC0F7A7ADC /* ContentView.swift */; };
@@ -27,7 +28,6 @@
 		E3E2CE8D61A0F802B07B1032 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246EAE3CBFC839D6AA17A3A3 /* NotificationService.swift */; };
 		EB216FCFA15A62E6CAD12B80 /* FileManagerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE6FC10522FEC75DD7992E /* FileManagerService.swift */; };
 		ECDC401A4E58FFA009E84AC4 /* MarkItDownApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A3141C5DCDD5022DA0869D /* MarkItDownApp.swift */; };
-		F5A2B3C4D5E6F7A8B9C0D1E2 /* PptConverter.py in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* PptConverter.py */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,16 +37,17 @@
 		246EAE3CBFC839D6AA17A3A3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		2EA26918200C7CF6EC574DA6 /* AsyncSemaphore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncSemaphore.swift; sourceTree = "<group>"; };
 		3EA8C0FF33D62847FF78FE1F /* OutputStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputStrategy.swift; sourceTree = "<group>"; };
-		52C35488AAA54543ACCA0AA25178FB70 /* AdvancedSettingsConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedSettingsConfig.swift; sourceTree = "<group>"; };
 		57BB94AC8E8BFEB0346DCA15 /* ConversionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionViewModel.swift; sourceTree = "<group>"; };
 		6EDE16FAEE4D57A9A571131A /* MarkItDown.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MarkItDown.entitlements; sourceTree = "<group>"; };
 		737300ABCB4A1D5FD6CC8962 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		75CE6FC10522FEC75DD7992E /* FileManagerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileManagerService.swift; sourceTree = "<group>"; };
 		76B677A93604F5219A57AEF0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		78CF566A444538E2F4A03B51 /* MarkItDown.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MarkItDown.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		82C8097968E5A6931B3774D7 /* PptConverter.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = PptConverter.py; sourceTree = "<group>"; };
 		94A3141C5DCDD5022DA0869D /* MarkItDownApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkItDownApp.swift; sourceTree = "<group>"; };
 		9C09E51AAF86FAE375806930 /* FileListRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileListRow.swift; sourceTree = "<group>"; };
 		A20D232076C8A2528C24B27B /* FileItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileItem.swift; sourceTree = "<group>"; };
+		AC867130345AECD8275B03E9 /* AdvancedSettingsConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedSettingsConfig.swift; sourceTree = "<group>"; };
 		AF5FBA23D50B1F6F3195D43C /* PreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSheet.swift; sourceTree = "<group>"; };
 		D0359B960C448D3231AAB835 /* FileListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileListView.swift; sourceTree = "<group>"; };
 		DECB3BB0AC0BB5DC0F7A7ADC /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -54,17 +55,16 @@
 		E3D08E06FEC0B86BC456A72F /* DropZoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropZoneView.swift; sourceTree = "<group>"; };
 		F14F7A9AFD3014C40DB33DFB /* ConversionScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionScheduler.swift; sourceTree = "<group>"; };
 		F3D2B5CE536387FCFF6553BF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A1B2C3D4E5F6A7B8C9D0E1F2 /* PptConverter.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = PptConverter.py; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		0528769B3388D04892D09A73 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				AC867130345AECD8275B03E9 /* AdvancedSettingsConfig.swift */,
 				E1B87FDDE7049EEF6EF0C9FF /* ConversionStatus.swift */,
 				A20D232076C8A2528C24B27B /* FileItem.swift */,
 				3EA8C0FF33D62847FF78FE1F /* OutputStrategy.swift */,
-				52C35488AAA54543ACCA0AA25178FB70 /* AdvancedSettingsConfig.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -147,7 +147,7 @@
 			children = (
 				F3D2B5CE536387FCFF6553BF /* Assets.xcassets */,
 				6EDE16FAEE4D57A9A571131A /* MarkItDown.entitlements */,
-				A1B2C3D4E5F6A7B8C9D0E1F2 /* PptConverter.py */,
+				82C8097968E5A6931B3774D7 /* PptConverter.py */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -160,8 +160,8 @@
 			buildConfigurationList = DEA4087D875A9F32667BC3B6 /* Build configuration list for PBXNativeTarget "MarkItDown" */;
 			buildPhases = (
 				F30B89B28E648C745F3FE174 /* Sources */,
+				01B17BEB86975C1D84A37280 /* Embed Python Runtime */,
 				8AA7F4CBEA4594E057C656B8 /* Resources */,
-				6E9F0A1B2C3D4E5F6A7B8C9D /* Embed Python Runtime */,
 			);
 			buildRules = (
 			);
@@ -212,15 +212,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F5A2B3C4D5E6F7A8B9C0D1E2 /* PptConverter.py in Resources */,
 				654B233515BE6C9098118EE1 /* Assets.xcassets in Resources */,
+				1B03B86A8FE0262354322491 /* PptConverter.py in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		6E9F0A1B2C3D4E5F6A7B8C9D /* Embed Python Runtime */ = {
+		01B17BEB86975C1D84A37280 /* Embed Python Runtime */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -236,7 +236,7 @@
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/bash;
+			shellPath = /bin/sh;
 			shellScript = "bash \"${SRCROOT}/Scripts/embed-python.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -246,11 +246,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				94F5D594F0F2C699C2B3CDCC /* AdvancedSettingsConfig.swift in Sources */,
 				CCBB2D77E1E4ED7279E39BEB /* AsyncSemaphore.swift in Sources */,
 				BEF31600345F37E7BC4DCD35 /* ContentView.swift in Sources */,
 				BDDBED0AE981561EB5F15AA4 /* ConversionScheduler.swift in Sources */,
 				C78B5C733C9C6616C25CB2BD /* ConversionStatus.swift in Sources */,
-				827CFE82248C421789C42CFB4B2D4 /* AdvancedSettingsConfig.swift in Sources */,
 				C7156CED443BF93AC5927AC7 /* ConversionViewModel.swift in Sources */,
 				0F1BBDA712C2E53A997C9FFE /* DropZoneView.swift in Sources */,
 				B52880C113C042DEBC8280D2 /* FileItem.swift in Sources */,
@@ -276,11 +276,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MarkItDown/Resources/MarkItDown.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 72C392QCR3;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MarkItDown/Info.plist;
@@ -288,7 +285,6 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dennis.markitdown;
 				PRODUCT_NAME = MarkItDown;
 				SDKROOT = macosx;
@@ -301,11 +297,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MarkItDown/Resources/MarkItDown.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 72C392QCR3;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MarkItDown/Info.plist;
@@ -313,7 +306,6 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dennis.markitdown;
 				PRODUCT_NAME = MarkItDown;
 				SDKROOT = macosx;

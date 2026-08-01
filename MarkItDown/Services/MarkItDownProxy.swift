@@ -1,4 +1,6 @@
 import Foundation
+import PDFKit
+import Vision
 
 actor MarkItDownProxy {
     private let pythonURL: URL
@@ -58,8 +60,11 @@ actor MarkItDownProxy {
             .path
         let pptSource: URL?
         if let dir = pptConverterDir {
-            let candidate = dir.appendingPathComponent("PptConverter.py")
-            pptSource = FileManager.default.fileExists(atPath: candidate.path) ? candidate : nil
+            // Converter is copied next to the venv (Contents/Resources/python/)
+            // by embed-python.sh; the Xcode Resources phase puts it one level
+            // up (Contents/Resources/). Check both so either build layout works.
+            let candidates = [dir, dir.deletingLastPathComponent()]
+            pptSource = Self.firstExistingFile(named: "PptConverter.py", in: candidates)
         } else {
             pptSource = nil
         }
@@ -68,6 +73,16 @@ actor MarkItDownProxy {
             sitePackagesPath: sitePackagesPath,
             pptConverterSource: pptSource
         )
+    }
+
+    private static func firstExistingFile(named name: String, in dirs: [URL]) -> URL? {
+        for dir in dirs {
+            let candidate = dir.appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                return candidate
+            }
+        }
+        return nil
     }
 
     /// Reads `version = x.y` from the venv's pyvenv.cfg; falls back to "3.14".
@@ -200,8 +215,28 @@ actor MarkItDownProxy {
             return try _convertWithTextutil(filePath: filePath)
         }
 
-        // Check if this is a .ppt file (legacy PowerPoint) — needs custom converter
+        // Legacy .ppt files need a custom converter. .pdf files go through the
+        // default markitdown path; garbled-text detection + OCR fallback now
+        // live in Swift (postProcessPDFResult).
         let isPpt = filePath.lowercased().hasSuffix(".ppt")
+        if isPpt {
+            return try _runConvertWithConverter(
+                filePath: filePath,
+                converterModule: "PptConverter",
+                converterSourcePath: pptConverterPath,
+                envKey: "MARKITDOWN_PPT_CONVERTER_PATH",
+                enableLLM: false,
+                llmApiKey: nil,
+                llmModel: "",
+                enableOCR: false,
+                enableAzure: false,
+                azureEndpoint: nil,
+                azureApiKey: nil,
+                customPrompt: "",
+                pythonURL: pythonURL,
+                sitePackagesPath: sitePackagesPath
+            )
+        }
 
         let escapedPath = filePath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
 
@@ -210,48 +245,17 @@ actor MarkItDownProxy {
         parts.append("sys.path.insert(0, \"\(sitePackagesPath)\")")
         parts.append("from markitdown import MarkItDown")
 
-        if isPpt {
-            guard let pptConverterPath else {
-                throw MarkItDownError.conversionFailed(
-                    "文件: \(filePath)\n未找到 PptConverter.py，无法转换 .ppt 文件"
-                )
-            }
-
-            // PptConverter.py location is provided by the host app via environment.
-            parts.append("")
-            parts.append("_converter_src = open(os.environ['MARKITDOWN_PPT_CONVERTER_PATH']).read()")
-            parts.append("_converter_path = os.path.join(tempfile.gettempdir(), 'PptConverter.py')")
-            parts.append("with open(_converter_path, 'w') as f:")
-            parts.append("    f.write(_converter_src)")
-            parts.append("sys.path.insert(0, tempfile.gettempdir())")
-            parts.append("from PptConverter import PptConverter")
-            parts.append("")
-            parts.append("class _RegMarkItDown(MarkItDown):")
-            parts.append("    def register_converter(self, converter, *, priority=0.0):")
-            parts.append("        from markitdown._markitdown import ConverterRegistration")
-            parts.append("        self._converters.insert(0, ConverterRegistration(converter=converter, priority=priority))")
-            parts.append("")
-            parts.append("md = _RegMarkItDown(enable_plugins=False)")
-            parts.append("md.register_converter(PptConverter())")
-            parts.append("result = md.convert(\"\(escapedPath)\", keep_data_uris=True)")
-            parts.append("sys.stdout.write(result.text_content)")
-
-            let script = parts.joined(separator: "\n")
-            return try _runPython(
-                script: script,
-                filePath: filePath,
-                pythonURL: pythonURL,
-                environment: ["MARKITDOWN_PPT_CONVERTER_PATH": pptConverterPath]
-            )
-        } else {
-            parts.append("")
-            parts.append("md = MarkItDown(enable_plugins=False)")
-            parts.append("result = md.convert(\"\(escapedPath)\", keep_data_uris=True)")
-            parts.append("sys.stdout.write(result.text_content)")
-        }
+        parts.append("")
+        parts.append("md = MarkItDown(enable_plugins=False)")
+        parts.append("result = md.convert(\"\(escapedPath)\", keep_data_uris=True)")
+        parts.append("sys.stdout.write(result.text_content)")
 
         let script = parts.joined(separator: "\n")
-        return try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
+        let output = try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
+        if filePath.lowercased().hasSuffix(".pdf") {
+            return try postProcessPDFResult(output, filePath: filePath)
+        }
+        return output
     }
 
     private nonisolated func _runConvertWithLLM(
@@ -267,13 +271,16 @@ actor MarkItDownProxy {
             return try _convertWithTextutil(filePath: filePath)
         }
 
-        // Legacy .ppt files need a custom converter
-        if filePath.lowercased().hasSuffix(".ppt") {
-            return try _runPptConvert(
+        // Legacy .ppt files need a custom converter. .pdf files go through the
+        // default markitdown path; garbled-text detection + OCR fallback now
+        // live in Swift (postProcessPDFResult).
+        let isPpt = filePath.lowercased().hasSuffix(".ppt")
+        if isPpt {
+            return try _runConvertWithConverter(
                 filePath: filePath,
-                pythonURL: pythonURL,
-                sitePackagesPath: sitePackagesPath,
-                pptConverterPath: pptConverterPath,
+                converterModule: "PptConverter",
+                converterSourcePath: pptConverterPath,
+                envKey: "MARKITDOWN_PPT_CONVERTER_PATH",
                 enableLLM: true,
                 llmApiKey: apiKey,
                 llmModel: model,
@@ -281,7 +288,9 @@ actor MarkItDownProxy {
                 enableAzure: false,
                 azureEndpoint: nil,
                 azureApiKey: nil,
-                customPrompt: ""
+                customPrompt: "",
+                pythonURL: pythonURL,
+                sitePackagesPath: sitePackagesPath
             )
         }
 
@@ -313,7 +322,11 @@ actor MarkItDownProxy {
         parts.append("sys.stdout.write(result.text_content)")
 
         let script = parts.joined(separator: "\n")
-        return try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
+        let output = try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
+        if filePath.lowercased().hasSuffix(".pdf") {
+            return try postProcessPDFResult(output, filePath: filePath)
+        }
+        return output
     }
 
     private nonisolated func _runConvertWithOptions(
@@ -335,13 +348,16 @@ actor MarkItDownProxy {
             return try _convertWithTextutil(filePath: filePath)
         }
 
-        // Legacy .ppt files need a custom converter — delegate to a unified script builder
-        if filePath.lowercased().hasSuffix(".ppt") {
-            return try _runPptConvert(
+        // Legacy .ppt files need a custom converter. .pdf files go through the
+        // default markitdown path; garbled-text detection + OCR fallback now
+        // live in Swift (postProcessPDFResult).
+        let isPpt = filePath.lowercased().hasSuffix(".ppt")
+        if isPpt {
+            return try _runConvertWithConverter(
                 filePath: filePath,
-                pythonURL: pythonURL,
-                sitePackagesPath: sitePackagesPath,
-                pptConverterPath: pptConverterPath,
+                converterModule: "PptConverter",
+                converterSourcePath: pptConverterPath,
+                envKey: "MARKITDOWN_PPT_CONVERTER_PATH",
                 enableLLM: enableLLM,
                 llmApiKey: llmApiKey,
                 llmModel: llmModel,
@@ -349,7 +365,9 @@ actor MarkItDownProxy {
                 enableAzure: enableAzure,
                 azureEndpoint: azureEndpoint,
                 azureApiKey: azureApiKey,
-                customPrompt: customPrompt
+                customPrompt: customPrompt,
+                pythonURL: pythonURL,
+                sitePackagesPath: sitePackagesPath
             )
         }
 
@@ -426,7 +444,11 @@ actor MarkItDownProxy {
         }
 
         let script = parts.joined(separator: "\n")
-        return try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
+        let output = try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
+        if filePath.lowercased().hasSuffix(".pdf") {
+            return try postProcessPDFResult(output, filePath: filePath)
+        }
+        return output
     }
 
     /// Fallback converter for legacy .doc files using macOS textutil.
@@ -471,12 +493,96 @@ actor MarkItDownProxy {
         return output
     }
 
-    /// Unified .ppt conversion with advanced options (LLM, Azure, OCR).
-    private nonisolated func _runPptConvert(
+    /// Detects whether markitdown's PDF extraction produced garbled text that
+    /// needs an OCR fallback. Mirrors RobustPdfConverter._is_garbled:
+    /// (cid:NNN) placeholders, U+FFFD replacement chars, or illegal controls.
+    private nonisolated func isGarbledPDFText(_ text: String) -> Bool {
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return true
+        }
+        let cidPattern = #"\(cid:\d+\)"#
+        let cidCount = matches(of: cidPattern, in: text)
+        if cidCount >= 3 {
+            return true
+        }
+        if text.contains("\u{FFFD}") {
+            return true
+        }
+        let controlPattern = #"[\x{00}-\x{08}\x{0B}\x{0E}-\x{1F}\x{7F}]"#
+        return matches(of: controlPattern, in: text) >= 3
+    }
+
+    private nonisolated func matches(of pattern: String, in text: String) -> Int {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return 0 }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.numberOfMatches(in: text, range: range)
+    }
+
+    /// Post-processes PDF conversion output. Garbled or empty extractions are
+    /// retried via on-device Vision OCR (PDFKit rendering + VNRecognizeTextRequest).
+    /// Returns the original output when OCR is unavailable or still fails.
+    private nonisolated func postProcessPDFResult(_ text: String, filePath: String) throws -> String {
+        guard isGarbledPDFText(text) else { return text }
+        do {
+            let ocrText = try ocrPDFWithVision(filePath: filePath)
+            guard !ocrText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return text
+            }
+            return ocrText
+        } catch {
+            return text
+        }
+    }
+
+    /// Renders each PDF page with PDFKit and runs Vision text recognition.
+    private nonisolated func ocrPDFWithVision(filePath: String) throws -> String {
+        guard let document = PDFDocument(url: URL(fileURLWithPath: filePath)) else {
+            throw MarkItDownError.conversionFailed(
+                "文件: \(filePath)\n无法打开 PDF 进行 OCR"
+            )
+        }
+
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["zh-Hans", "en-US"]
+        request.usesLanguageCorrection = true
+
+        var pageTexts: [String] = []
+        for pageIndex in 0..<document.pageCount {
+            guard let page = document.page(at: pageIndex) else { continue }
+            let bounds = page.bounds(for: .mediaBox)
+            let scale: CGFloat = 2.0
+            let targetSize = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+            let pageImage = page.thumbnail(of: targetSize, for: .mediaBox)
+            guard let cgImage = pageImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                continue
+            }
+
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            try handler.perform([request])
+
+            guard let observations = request.results else { continue }
+            let lines = observations.compactMap { $0.topCandidates(1).first?.string }
+            if !lines.isEmpty {
+                pageTexts.append(lines.joined(separator: "\n"))
+            }
+        }
+
+        if pageTexts.isEmpty {
+            throw MarkItDownError.conversionFailed(
+                "文件: \(filePath)\nOCR 未识别到文本"
+            )
+        }
+        return pageTexts.joined(separator: "\n\n---\n\n")
+    }
+
+    /// Unified conversion for formats that need a custom registered converter
+    /// (.ppt → PptConverter) with advanced options.
+    private nonisolated func _runConvertWithConverter(
         filePath: String,
-        pythonURL: URL,
-        sitePackagesPath: String,
-        pptConverterPath: String?,
+        converterModule: String,
+        converterSourcePath: String?,
+        envKey: String,
         enableLLM: Bool,
         llmApiKey: String?,
         llmModel: String,
@@ -484,11 +590,13 @@ actor MarkItDownProxy {
         enableAzure: Bool,
         azureEndpoint: String?,
         azureApiKey: String?,
-        customPrompt: String
+        customPrompt: String,
+        pythonURL: URL,
+        sitePackagesPath: String
     ) throws -> String {
-        guard let pptConverterPath else {
+        guard let converterSourcePath else {
             throw MarkItDownError.conversionFailed(
-                "文件: \(filePath)\n未找到 PptConverter.py，无法转换 .ppt 文件"
+                "文件: \(filePath)\n未找到 \(converterModule).py，无法转换该文件"
             )
         }
 
@@ -500,19 +608,18 @@ actor MarkItDownProxy {
         parts.append("from markitdown import MarkItDown")
 
         parts.append("")
-        parts.append("_converter_src = open(os.environ['MARKITDOWN_PPT_CONVERTER_PATH']).read()")
-        parts.append("_converter_path = os.path.join(tempfile.gettempdir(), 'PptConverter.py')")
+        parts.append("_converter_src = open(os.environ['\(envKey)']).read()")
+        parts.append("_converter_path = os.path.join(tempfile.gettempdir(), '\(converterModule).py')")
         parts.append("with open(_converter_path, 'w') as f:")
         parts.append("    f.write(_converter_src)")
         parts.append("sys.path.insert(0, tempfile.gettempdir())")
-        parts.append("from PptConverter import PptConverter")
+        parts.append("from \(converterModule) import \(converterModule)")
         parts.append("")
         parts.append("class _RegMarkItDown(MarkItDown):")
         parts.append("    def register_converter(self, converter, *, priority=0.0):")
         parts.append("        from markitdown._markitdown import ConverterRegistration")
         parts.append("        self._converters.insert(0, ConverterRegistration(converter=converter, priority=priority))")
 
-        // Build kwargs for MarkItDown constructor
         var kwargs = [String]()
 
         if enableLLM, let apiKey = llmApiKey, !apiKey.isEmpty {
@@ -542,16 +649,14 @@ actor MarkItDownProxy {
             kwargs.append("enable_plugins=True")
         }
 
-        // Use _RegMarkItDown with PptConverter registered
         if kwargs.isEmpty {
             parts.append("md = _RegMarkItDown(enable_plugins=False)")
         } else {
             let kwargStr = kwargs.joined(separator: ", ")
             parts.append("md = _RegMarkItDown(\(kwargStr))")
         }
-        parts.append("md.register_converter(PptConverter())")
+        parts.append("md.register_converter(\(converterModule)())")
 
-        // Execute conversion
         if enableLLM && !customPrompt.isEmpty {
             let escapedPrompt = customPrompt.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
             parts.append("")
@@ -575,7 +680,7 @@ actor MarkItDownProxy {
             script: script,
             filePath: filePath,
             pythonURL: pythonURL,
-            environment: ["MARKITDOWN_PPT_CONVERTER_PATH": pptConverterPath]
+            environment: [envKey: converterSourcePath]
         )
     }
 
