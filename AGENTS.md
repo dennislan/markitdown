@@ -53,7 +53,7 @@ MarkItDown/                    # Swift source root
 7. Status updates flow back via callback → `@Published` properties drive SwiftUI refresh
 
 ### Python Bridge ([MarkItDownProxy](MarkItDown/Services/MarkItDownProxy.swift))
-Hardcoded path to `/Users/dennis/AIProjects/markitdown/markitdown-env` (local venv with Python 3.14). The proxy constructs inline Python scripts that `sys.path.insert()` the site-packages, import `markitdown.MarkItDown`, and call `.convert()`. Output is captured from subprocess stdout; errors from stderr.
+Resolves the Python runtime in priority order: (1) the app-bundle embedded runtime at `Contents/Resources/python/markitdown-env` (produced by the "Embed Python Runtime" build phase / `build_release.sh`), (2) the repo-local `markitdown-env` derived from `#filePath` during development — no machine-specific absolute paths remain. The Python version is read from `pyvenv.cfg`, not hardcoded. The proxy constructs inline Python scripts that `sys.path.insert()` the site-packages, import `markitdown.MarkItDown`, and call `.convert()`. Output is captured from subprocess stdout; errors from stderr. For `.ppt` files, the `PptConverter.py` path is passed via the `MARKITDOWN_PPT_CONVERTER_PATH` environment variable.
 
 ### Output Strategies ([OutputStrategy](MarkItDown/Models/OutputStrategy.swift))
 - `sameDirectory` — `.md` next to source file
@@ -88,7 +88,7 @@ markitdown ~/path/to/file.pdf -o output.md
 - **Settings Persistence**: `@AppStorage` for simple values (concurrency, strategy, toggles). `UserDefaults.standard` for URL persistence. `KeychainHelper` for sensitive data (API keys).
 - **Preview Rendering**: `PreviewSheet` uses a simple regex-based Markdown-to-HTML converter in a `WKWebView`. Not a full parser — handles headings, bold, italic, code, links, blockquotes, lists.
 - **No App Sandbox**: Entitlements disable sandbox (`com.apple.security.app-sandbox: false`) for easier file access during development.
-- **Hardcoded paths**: `MarkItDownProxy.init()` has a hardcoded path to the local venv. This should be parameterized for distribution.
+- **Python runtime resolution**: `MarkItDownProxy.resolveRuntime()` prefers the app-embedded runtime under `Contents/Resources/python/` and falls back to the repo-local `markitdown-env` (derived from `#filePath`). The "Embed Python Runtime" build phase (`Scripts/embed-python.sh`) must run before a build is considered self-contained.
 
 ## Common Tasks
 

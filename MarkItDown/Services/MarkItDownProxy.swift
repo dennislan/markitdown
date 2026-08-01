@@ -3,22 +3,85 @@ import Foundation
 actor MarkItDownProxy {
     private let pythonURL: URL
     private let sitePackagesPath: String
+    private let pptConverterPath: String?
 
     init() {
-        // Resolve Python from the app bundle's embedded Resources directory.
-        // During development (not from a .app bundle), fall back to the local venv.
-        let bundleURL = Bundle.main.bundleURL
-        let resourcesURL = bundleURL.appendingPathComponent("Contents/Resources/python")
+        let runtime = Self.resolveRuntime()
+        self.pythonURL = runtime?.pythonURL ?? URL(fileURLWithPath: "/usr/bin/false")
+        self.sitePackagesPath = runtime?.sitePackagesPath ?? ""
+        self.pptConverterPath = runtime?.pptConverterSource?.path
+    }
 
-        if FileManager.default.fileExists(atPath: resourcesURL.path) {
-            self.pythonURL = resourcesURL.appendingPathComponent("markitdown-env/bin/python3")
-            self.sitePackagesPath = resourcesURL.path + "/markitdown-env/lib/python3.14/site-packages"
-        } else {
-            // Development fallback: use local venv
-            let envPath = "/Users/dennis/AIProjects/markitdown/markitdown-env"
-            self.pythonURL = URL(fileURLWithPath: "\(envPath)/bin/python3")
-            self.sitePackagesPath = "\(envPath)/lib/python3.14/site-packages"
+    // MARK: - Runtime resolution (embedded bundle first, repo venv as dev fallback)
+
+    private struct PythonRuntime {
+        let pythonURL: URL
+        let sitePackagesPath: String
+        /// Absolute path to PptConverter.py, when available.
+        let pptConverterSource: URL?
+    }
+
+    /// Locates the Python runtime in priority order:
+    /// 1. App-bundle embedded runtime (produced by the "Embed Python Runtime"
+    ///    Xcode build phase and build_release.sh).
+    /// 2. Repo-local `markitdown-env` during development, derived from this
+    ///    source file's own path — no machine-specific absolute paths.
+    private static func resolveRuntime() -> PythonRuntime? {
+        let fm = FileManager.default
+
+        let resourcesURL = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Resources/python")
+        let bundledVenv = resourcesURL.appendingPathComponent("markitdown-env")
+        if fm.fileExists(atPath: bundledVenv.path) {
+            return makeRuntime(venvDir: bundledVenv, pptConverterDir: resourcesURL)
         }
+
+        let sourceFile = URL(fileURLWithPath: #filePath) // …/MarkItDown/Services/MarkItDownProxy.swift
+        let repoRoot = sourceFile
+            .deletingLastPathComponent() // Services
+            .deletingLastPathComponent() // MarkItDown
+            .deletingLastPathComponent() // repo root
+        let devVenv = repoRoot.appendingPathComponent("markitdown-env")
+        if fm.fileExists(atPath: devVenv.path) {
+            let pptDir = repoRoot.appendingPathComponent("MarkItDown/Resources")
+            return makeRuntime(venvDir: devVenv, pptConverterDir: pptDir)
+        }
+
+        return nil
+    }
+
+    private static func makeRuntime(venvDir: URL, pptConverterDir: URL?) -> PythonRuntime {
+        let version = pythonVersion(venvDir: venvDir)
+        let pythonURL = venvDir.appendingPathComponent("bin/python3")
+        let sitePackagesPath = venvDir
+            .appendingPathComponent("lib/python\(version)/site-packages")
+            .path
+        let pptSource: URL?
+        if let dir = pptConverterDir {
+            let candidate = dir.appendingPathComponent("PptConverter.py")
+            pptSource = FileManager.default.fileExists(atPath: candidate.path) ? candidate : nil
+        } else {
+            pptSource = nil
+        }
+        return PythonRuntime(
+            pythonURL: pythonURL,
+            sitePackagesPath: sitePackagesPath,
+            pptConverterSource: pptSource
+        )
+    }
+
+    /// Reads `version = x.y` from the venv's pyvenv.cfg; falls back to "3.14".
+    private static func pythonVersion(venvDir: URL) -> String {
+        guard let content = try? String(contentsOf: venvDir.appendingPathComponent("pyvenv.cfg"), encoding: .utf8) else {
+            return "3.14"
+        }
+        for line in content.split(separator: "\n") {
+            let parts = line.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+            if parts.count == 2, parts[0] == "version" {
+                return parts[1]
+            }
+        }
+        return "3.14"
     }
 
     // MARK: - Public async entry points (capture actor state, dispatch to nonisolated workers)
@@ -26,10 +89,11 @@ actor MarkItDownProxy {
     func convertFile(_ filePath: String) async throws -> String {
         let pyURL = pythonURL
         let spPath = sitePackagesPath
+        let pptPath = pptConverterPath
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
-                    let result = try self._runConvert(filePath: filePath, pythonURL: pyURL, sitePackagesPath: spPath)
+                    let result = try self._runConvert(filePath: filePath, pythonURL: pyURL, sitePackagesPath: spPath, pptConverterPath: pptPath)
                     continuation.resume(returning: result)
                 } catch {
                     continuation.resume(throwing: error)
@@ -41,10 +105,11 @@ actor MarkItDownProxy {
     func convertFileWithLLM(_ filePath: String, apiKey: String, model: String) async throws -> String {
         let pyURL = pythonURL
         let spPath = sitePackagesPath
+        let pptPath = pptConverterPath
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
-                    let result = try self._runConvertWithLLM(filePath: filePath, apiKey: apiKey, model: model, pythonURL: pyURL, sitePackagesPath: spPath)
+                    let result = try self._runConvertWithLLM(filePath: filePath, apiKey: apiKey, model: model, pythonURL: pyURL, sitePackagesPath: spPath, pptConverterPath: pptPath)
                     continuation.resume(returning: result)
                 } catch {
                     continuation.resume(throwing: error)
@@ -66,6 +131,7 @@ actor MarkItDownProxy {
     ) async throws -> String {
         let pyURL = pythonURL
         let spPath = sitePackagesPath
+        let pptPath = pptConverterPath
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
@@ -80,7 +146,8 @@ actor MarkItDownProxy {
                         azureApiKey: azureApiKey,
                         customPrompt: customPrompt,
                         pythonURL: pyURL,
-                        sitePackagesPath: spPath
+                        sitePackagesPath: spPath,
+                        pptConverterPath: pptPath
                     )
                     continuation.resume(returning: result)
                 } catch {
@@ -92,14 +159,8 @@ actor MarkItDownProxy {
 
     // MARK: - Static helpers (for AdvancedSettingsConfig)
 
-    static func pythonBinaryURL() -> URL {
-        let bundleURL = Bundle.main.bundleURL
-        let resourcesURL = bundleURL.appendingPathComponent("Contents/Resources/python")
-        if FileManager.default.fileExists(atPath: resourcesURL.path) {
-            return resourcesURL.appendingPathComponent("markitdown-env/bin/python3")
-        }
-        let envPath = "/Users/dennis/AIProjects/markitdown/markitdown-env"
-        return URL(fileURLWithPath: "\(envPath)/bin/python3")
+    static func pythonBinaryURL() -> URL? {
+        resolveRuntime()?.pythonURL
     }
 
     static func runSilentPython(pythonURL: URL, script: String) throws -> String {
@@ -131,7 +192,8 @@ actor MarkItDownProxy {
     private nonisolated func _runConvert(
         filePath: String,
         pythonURL: URL,
-        sitePackagesPath: String
+        sitePackagesPath: String,
+        pptConverterPath: String?
     ) throws -> String {
         // Legacy .doc files are not supported by markitdown — fall back to macOS textutil.
         if filePath.lowercased().hasSuffix(".doc") {
@@ -149,15 +211,15 @@ actor MarkItDownProxy {
         parts.append("from markitdown import MarkItDown")
 
         if isPpt {
-            // Locate the app bundle to find PptConverter.py
+            guard let pptConverterPath else {
+                throw MarkItDownError.conversionFailed(
+                    "文件: \(filePath)\n未找到 PptConverter.py，无法转换 .ppt 文件"
+                )
+            }
+
+            // PptConverter.py location is provided by the host app via environment.
             parts.append("")
-            parts.append("_bundle = os.path.dirname(sys.executable)")
-            parts.append("if _bundle.endswith('/Contents/Resources/python/markitdown-env/bin'):")
-            parts.append("    _bundle = _bundle[:-len('/Contents/Resources/python/markitdown-env/bin')] + '/Contents/Resources'")
-            parts.append("elif _bundle.endswith('/bin'):")
-            parts.append("    _bundle = _bundle[:-len('/bin')] + '/Resources'")
-            parts.append("")
-            parts.append("_converter_src = open(os.path.join(_bundle, 'PptConverter.py')).read()")
+            parts.append("_converter_src = open(os.environ['MARKITDOWN_PPT_CONVERTER_PATH']).read()")
             parts.append("_converter_path = os.path.join(tempfile.gettempdir(), 'PptConverter.py')")
             parts.append("with open(_converter_path, 'w') as f:")
             parts.append("    f.write(_converter_src)")
@@ -173,6 +235,14 @@ actor MarkItDownProxy {
             parts.append("md.register_converter(PptConverter())")
             parts.append("result = md.convert(\"\(escapedPath)\", keep_data_uris=True)")
             parts.append("sys.stdout.write(result.text_content)")
+
+            let script = parts.joined(separator: "\n")
+            return try _runPython(
+                script: script,
+                filePath: filePath,
+                pythonURL: pythonURL,
+                environment: ["MARKITDOWN_PPT_CONVERTER_PATH": pptConverterPath]
+            )
         } else {
             parts.append("")
             parts.append("md = MarkItDown(enable_plugins=False)")
@@ -189,7 +259,8 @@ actor MarkItDownProxy {
         apiKey: String,
         model: String,
         pythonURL: URL,
-        sitePackagesPath: String
+        sitePackagesPath: String,
+        pptConverterPath: String?
     ) throws -> String {
         // Legacy .doc files are not supported by markitdown — fall back to macOS textutil.
         if filePath.lowercased().hasSuffix(".doc") {
@@ -202,6 +273,7 @@ actor MarkItDownProxy {
                 filePath: filePath,
                 pythonURL: pythonURL,
                 sitePackagesPath: sitePackagesPath,
+                pptConverterPath: pptConverterPath,
                 enableLLM: true,
                 llmApiKey: apiKey,
                 llmModel: model,
@@ -255,7 +327,8 @@ actor MarkItDownProxy {
         azureApiKey: String?,
         customPrompt: String,
         pythonURL: URL,
-        sitePackagesPath: String
+        sitePackagesPath: String,
+        pptConverterPath: String?
     ) throws -> String {
         // Legacy .doc files are not supported by markitdown — fall back to macOS textutil.
         if filePath.lowercased().hasSuffix(".doc") {
@@ -268,6 +341,7 @@ actor MarkItDownProxy {
                 filePath: filePath,
                 pythonURL: pythonURL,
                 sitePackagesPath: sitePackagesPath,
+                pptConverterPath: pptConverterPath,
                 enableLLM: enableLLM,
                 llmApiKey: llmApiKey,
                 llmModel: llmModel,
@@ -402,6 +476,7 @@ actor MarkItDownProxy {
         filePath: String,
         pythonURL: URL,
         sitePackagesPath: String,
+        pptConverterPath: String?,
         enableLLM: Bool,
         llmApiKey: String?,
         llmModel: String,
@@ -411,6 +486,12 @@ actor MarkItDownProxy {
         azureApiKey: String?,
         customPrompt: String
     ) throws -> String {
+        guard let pptConverterPath else {
+            throw MarkItDownError.conversionFailed(
+                "文件: \(filePath)\n未找到 PptConverter.py，无法转换 .ppt 文件"
+            )
+        }
+
         let escapedPath = filePath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
 
         var parts = [String]()
@@ -418,15 +499,8 @@ actor MarkItDownProxy {
         parts.append("sys.path.insert(0, \"\(sitePackagesPath)\")")
         parts.append("from markitdown import MarkItDown")
 
-        // Locate the app bundle to find PptConverter.py
         parts.append("")
-        parts.append("_bundle = os.path.dirname(sys.executable)")
-        parts.append("if _bundle.endswith('/Contents/Resources/python/markitdown-env/bin'):")
-        parts.append("    _bundle = _bundle[:-len('/Contents/Resources/python/markitdown-env/bin')] + '/Contents/Resources'")
-        parts.append("elif _bundle.endswith('/bin'):")
-        parts.append("    _bundle = _bundle[:-len('/bin')] + '/Resources'")
-        parts.append("")
-        parts.append("_converter_src = open(os.path.join(_bundle, 'PptConverter.py')).read()")
+        parts.append("_converter_src = open(os.environ['MARKITDOWN_PPT_CONVERTER_PATH']).read()")
         parts.append("_converter_path = os.path.join(tempfile.gettempdir(), 'PptConverter.py')")
         parts.append("with open(_converter_path, 'w') as f:")
         parts.append("    f.write(_converter_src)")
@@ -497,17 +571,26 @@ actor MarkItDownProxy {
         }
 
         let script = parts.joined(separator: "\n")
-        return try _runPython(script: script, filePath: filePath, pythonURL: pythonURL)
+        return try _runPython(
+            script: script,
+            filePath: filePath,
+            pythonURL: pythonURL,
+            environment: ["MARKITDOWN_PPT_CONVERTER_PATH": pptConverterPath]
+        )
     }
 
     private nonisolated func _runPython(
         script: String,
         filePath: String,
-        pythonURL: URL
+        pythonURL: URL,
+        environment: [String: String] = [:]
     ) throws -> String {
         let process = Process()
         process.executableURL = pythonURL
         process.arguments = ["-c", script]
+        if !environment.isEmpty {
+            process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
+        }
 
         let stdout = Pipe()
         let stderr = Pipe()

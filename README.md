@@ -32,7 +32,7 @@ Drag in your PDFs, Word docs, Excel spreadsheets, PowerPoint presentations, imag
 ## Requirements
 
 - macOS 13 Ventura or later
-- Python 3.10+ with `markitdown[all]` installed (in a virtual environment)
+- Python 3.14 (Homebrew: `brew install python@3.14`) with `markitdown[all]` installed in a virtual environment
 
 ## Setup
 
@@ -51,7 +51,7 @@ pip install "markitdown[all]"
 open MarkItDown.xcodeproj
 ```
 
-> **Note:** The Python bridge currently uses a hardcoded path to `markitdown-env/`. Adjust `MarkItDownProxy.swift` if your venv is located elsewhere.
+> **Self-contained runtime:** the "Embed Python Runtime" Xcode build phase copies the Python framework and `markitdown-env` into the app bundle (`Contents/Resources/python/`) and relocates every dylib reference to `@loader_path`, so the built app runs standalone without Homebrew or the dev machine's venv. The embed is incremental — it only re-runs when the venv or framework changes. For a distributable release build, use `./build_release.sh`.
 
 ## Architecture
 
@@ -67,7 +67,7 @@ Swift UI (SwiftUI + AppKit)
   ├── MarkItDownProxy      — spawns Python subprocess for each conversion
   ├── FileManagerService   — file scanning, UTType filtering, output resolution
   │
-  └── Python (markitdown)  — subprocess bridge, runs in local venv
+  └── Python (markitdown)  — subprocess bridge, runs from the app-embedded runtime
 ```
 
 ### Conversion Flow

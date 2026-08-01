@@ -26,6 +26,12 @@ targets:
           - "markitdown-env"
     resources:
       - path: MarkItDown/Resources/Assets.xcassets
+      - path: MarkItDown/Resources/PptConverter.py
+    postCompileScripts:
+      - name: Embed Python Runtime
+        script: |
+          bash "${SRCROOT}/Scripts/embed-python.sh"
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_NAME: MarkItDown

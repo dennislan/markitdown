@@ -76,6 +76,11 @@ if [[ ! -d "${RELEASE_APP}" ]]; then
 fi
 
 # ── Step 2: Embed Python into the built app bundle ──────────────────
+# The "Embed Python Runtime" Xcode build phase already does this during
+# xcodebuild, but its output lands wherever BUILT_PRODUCTS_DIR resolved for
+# this command (derived-data layout). This call re-runs it against the exact
+# known Release output path; embed-python.sh fast-paths out when the runtime
+# is already present and up-to-date, so this is normally a no-op.
 info "Embedding Python runtime into app bundle…"
 
 # Point embed-python.sh at the exact Release .app output
@@ -85,6 +90,14 @@ SRCROOT="${SCRIPT_DIR}" \
 bash "${SCRIPT_DIR}/Scripts/embed-python.sh"
 
 success "Python runtime embedded."
+
+# ── Step 2.5: Re-sign the app bundle ──────────────────────────────────────
+# embed-python.sh rewrites Mach-O dylib references inside the bundle, which
+# invalidates their ad-hoc signatures. Re-sign the whole app so macOS lets it
+# run (otherwise the embedded python is SIGKILLed at launch).
+info "Re-signing app bundle (ad-hoc)…"
+codesign --force --deep -s - --options runtime "${RELEASE_APP}"
+success "App bundle re-signed."
 
 # ── Step 3: Verify ──────────────────────────────────────────────────
 EMBEDDED_PYTHON="${RELEASE_APP}/Contents/Resources/python/markitdown-env/bin/python3"

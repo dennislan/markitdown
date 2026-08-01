@@ -161,6 +161,7 @@
 			buildPhases = (
 				F30B89B28E648C745F3FE174 /* Sources */,
 				8AA7F4CBEA4594E057C656B8 /* Resources */,
+				6E9F0A1B2C3D4E5F6A7B8C9D /* Embed Python Runtime */,
 			);
 			buildRules = (
 			);
@@ -217,6 +218,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		6E9F0A1B2C3D4E5F6A7B8C9D /* Embed Python Runtime */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed Python Runtime";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "bash \"${SRCROOT}/Scripts/embed-python.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		F30B89B28E648C745F3FE174 /* Sources */ = {

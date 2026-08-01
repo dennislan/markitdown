@@ -129,8 +129,8 @@ struct AdvancedSettingsConfig {
 
     private func _checkPackageInstalled(_ packageName: String) -> Bool {
         // Attempt a quick Python check to see if the package can be imported
+        guard let pythonURL = MarkItDownProxy.pythonBinaryURL() else { return false }
         do {
-            let pythonURL = MarkItDownProxy.pythonBinaryURL()
             let script = "import importlib; print(importlib.util.find_spec(\"\(packageName)\") is not None)"
             let output = try MarkItDownProxy.runSilentPython(pythonURL: pythonURL, script: script)
             return output.trimmingCharacters(in: .whitespacesAndNewlines) == "True"
