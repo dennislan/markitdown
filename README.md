@@ -45,6 +45,8 @@ source markitdown-env/bin/activate
 pip install "markitdown[all]"
 ```
 
+> PDF 字体编码损坏（如缺失 ToUnicode/cmap 导致输出 `(cid:0)` 乱码）时，app 会通过 macOS 原生 Vision 框架（PDFKit 渲染 + `VNRecognizeTextRequest`，中英双语）在本地做 OCR 兜底，无需任何额外 Python 依赖。
+
 3. Open the Xcode project and run:
 
 ```bash
